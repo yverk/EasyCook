@@ -6,7 +6,10 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const User = require('./models/User');
-
+/*
+  This class is where all the api is kept.
+  Any info on the login and profile function can be added or fixed here
+*/
 
 dotenv.config();
 
@@ -76,5 +79,3 @@ app.post('/register', async (req, res) => {
 });
 
 app.listen(4000);
-
-//RYYT0vjEjapD1OB2
