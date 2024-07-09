@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const Groq = require('groq-sdk');
 const User = require('./models/User');
 /*
   This class is where all the api is kept.
@@ -16,6 +17,7 @@ dotenv.config();
 mongoose.connect(process.env.MONGO_URL); // connect to the mongoose server
 const jwtSecret = process.env.JWT_SECRET; // key
 const bcryptSalt = bcrypt.genSaltSync(10);
+const groq = new Groq();
 
 const app = express();
 app.use(express.json());
@@ -78,4 +80,41 @@ app.post('/register', async (req, res) => {
   }
 });
 
-app.listen(4000);
+// connects to the api
+// accesses the bot for the recipe messenger
+app.post('/generate-recipe', async (req, res) => {
+  const { ingredients } = req.body;
+
+  const messages = [
+    {
+      role: "system",
+      content: "You are a helpful assistant that provides recipes based on given ingredients. Please respond in the following format: \n\nTitle:\nIngredients:\n- List of ingredients\n\nSteps:\n1. Step one\n2. Step two\n\nNotes:\n- Any additional notes",
+    },
+    {
+      role: "user",
+      content: `Given the following ingredients: ${ingredients.join(', ')}, provide a recipe.`,
+    },
+  ];
+
+  try {
+    const response = await groq.chat.completions.create({
+      messages,
+      model: "llama3-8b-8192",
+      temperature: 0.5,
+      max_tokens: 1024,
+      top_p: 1,
+      stop: null,
+      stream: false,
+    });
+
+    const recipe = response.choices[0]?.message?.content.trim();
+    res.json({ recipe });
+  } catch (error) {
+    console.error('Error generating recipe:', error);
+    res.status(500).json({ error: 'Failed to generate recipe' });
+  }
+});
+
+app.listen(4000, () => {
+  console.log('Server running on port 4000');
+});
