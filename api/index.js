@@ -16,46 +16,55 @@ dotenv.config();
 
 mongoose.connect(process.env.MONGO_URL); // connect to the mongoose server
 const jwtSecret = process.env.JWT_SECRET; // key
-const bcryptSalt = bcrypt.genSaltSync(10);
-const groq = new Groq();
+const bcryptSalt = bcrypt.genSaltSync(10); // generate salt for bcrypt
+const groq = new Groq(); // initialize groq sdk
 
 const app = express();
-app.use(express.json());
-app.use(cookieParser());
+app.use(express.json()); // parse json requests
+app.use(cookieParser()); // parse cookies
 app.use(cors({
   credentials: true,
   origin: process.env.CLIENT_URL, // local host url
 }));
 
+// verify if server is running
 app.get('/test', (req, res) => {
   res.json('test ok');
 });
 
 // Creates unique profile and saves with cookies
 app.get('/profile', (req, res) => {
-  const token = req.cookies?.token;
+  const token = req.cookies?.token; // get token from cookies
   if (token) {
-    jwt.verify(token, jwtSecret, {}, (err, userData) => {
+    jwt.verify(token, jwtSecret, {}, (err, userData) => { // token is verified
       if (err) return res.status(403).json('invalid token');
-      res.json(userData);
+      res.json(userData); // if data is valid, send it
     });
   } else {
-    res.status(401).json('no token');
+    res.status(401).json('no token'); // throws error
   }
 });
 
+// login and authenticate user
 app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.body; // get username and password
   const foundUser = await User.findOne({ username });
   if (foundUser) {
     const passOk = bcrypt.compareSync(password, foundUser.password);
     if (passOk) {
-      jwt.sign({ userId: foundUser._id, username }, jwtSecret, {}, (err, token) => {
+      jwt.sign({ userId: foundUser._id, username }, jwtSecret, {}, (err, token) => { // generate JWT token
+        if (err) {
+          return res.status(500).json({ error: 'Failed to generate token' });
+        }
         res.cookie('token', token, { sameSite: 'none', secure: true }).json({
           id: foundUser._id,
         });
       });
+    } else {
+      res.status(401).json({ error: 'Invalid username or password' });
     }
+  } else {
+    res.status(401).json({ error: 'Invalid username or password' });
   }
 });
 // Register username and password
@@ -80,8 +89,13 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// connects to the api
-// accesses the bot for the recipe messenger
+/*
+  Here is the logic for the chat bot using Groq AI, the code was taken from the website itself and edited to
+  use what we needed it for.
+
+  Below I provided the URL so you can look over it or edit the info:
+  https://console.groq.com/docs/api-reference#chat-create
+*/
 app.post('/generate-recipe', async (req, res) => {
   const { ingredients } = req.body;
 

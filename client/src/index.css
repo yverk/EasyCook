@@ -81,3 +81,31 @@
     background-color: #c8e6c9;
   }
   
+  .bg-pastel-green {
+    background-color: #b4e197;
+  }
+  
+  .bg-pastel-green-dark {
+    background-color: #9ecc84;
+  }
+  
+  .bg-pastel-orange {
+    background-color: #ffc58b;
+  }
+  
+  .bg-pastel-orange-dark {
+    background-color: #e6b177;
+  }
+  
+  .bg-red-500 {
+    background-color: #f56565;
+  }
+  
+  .text-white {
+    color: #fff;
+  }
+  
+  .text-black {
+    color: #000;
+  }
+  
