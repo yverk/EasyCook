@@ -128,7 +128,7 @@ export default function Chat() {
             className="flex-grow border p-2 rounded-l-lg"
           />
           <button onClick={handleSend} className="bg-pastel-green text-black p-2 rounded-r-lg">
-            Send
+            Generate Recipe
           </button>
         </div>
       )}
