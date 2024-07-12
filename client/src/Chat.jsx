@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import axios from 'axios';
 import background from './assets/Foodie.jpg';
+import {UserContext} from "./UserContext.jsx";
 
 export default function Chat() {
     // variables for messages, input, recipe and active tab... more can be added
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [recipeHistory, setRecipeHistory] = useState([]);
+  //const [recipeHistory, setRecipeHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('chat');
+  const {setId, setUsername, recipeHistory, setRecipeHistory} = useContext(UserContext);
+
 
   // handle sending messages
   const handleSend = async () => {
@@ -53,10 +56,21 @@ export default function Chat() {
       handleSend();
     }
   };
+ 
+  // logout function
+  const handleLogout = async () => {
+    try {
+      await axios.post('http://localhost:4000/logout'); 
+      setId(null); // clears ID
+      setUsername(null); // clears Username
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <div className="flex h-screen flex-col relative" style={{ backgroundImage: `url(${background})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 1}}>
-      <div className="flex-shrink-0 flex justify-between items-center bg-gray-200 p-4">
+     <div className="flex-shrink-0 flex justify-between items-center bg-gray-200 p-4">
         <div>
           <button
             onClick={() => setActiveTab('chat')}
@@ -69,6 +83,13 @@ export default function Chat() {
             className={`p-2 ${activeTab === 'history' ? 'bg-pastel-orange text-white p-2 rounded-lg' : 'bg-pastel-orange-dark text-black p-2 rounded-lg'}`}
           >
             Recipe History
+          </button>
+        </div>
+        <div>
+          <button 
+          onClick={handleLogout}
+          className="bg-red-500 text-white p-2 rounded-lg">
+            Logout
           </button>
         </div>
       </div>

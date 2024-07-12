@@ -6,6 +6,7 @@ export const UserContext = createContext({});
 export function UserContextProvider({children}) {
   const [username, setUsername] = useState(null);
   const [id, setId] = useState(null);
+  const [recipeHistory, setRecipeHistory] = useState([]);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -13,6 +14,8 @@ export function UserContextProvider({children}) {
         const { data } = await axios.get('/profile');
         setId(data.userId);
         setUsername(data.username);
+        const historyResponse = await axios.get('/recipe-history');
+        setRecipeHistory(historyResponse.data);
       } catch (error) {
         console.log("No token found or session expired.");
       }
@@ -21,7 +24,7 @@ export function UserContextProvider({children}) {
   }, []);
 
   return (
-    <UserContext.Provider value={{ username, setUsername, id, setId }}>
+    <UserContext.Provider value={{ username, setUsername, id, setId, recipeHistory, setRecipeHistory }}>
       {children}
     </UserContext.Provider>
   );

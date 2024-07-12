@@ -67,6 +67,11 @@ app.post('/login', async (req, res) => {
     res.status(401).json({ error: 'Invalid username or password' });
   }
 });
+
+app.post('/logout', (req,res) => {
+  res.cookie('token', '', { sameSite: 'none', secure: true }).json('ok');
+});
+
 // Register username and password
 // Encrypts the unique ID
 app.post('/register', async (req, res) => {
@@ -95,38 +100,78 @@ app.post('/register', async (req, res) => {
 
   Below I provided the URL so you can look over it or edit the info:
   https://console.groq.com/docs/api-reference#chat-create
+
+  User sends request to generate recipe
 */
 app.post('/generate-recipe', async (req, res) => {
   const { ingredients } = req.body;
+  const token = req.cookies?.token;
 
-  const messages = [
-    {
-      role: "system",
-      content: "You are a helpful assistant that provides recipes based on given ingredients. Please respond in the following format: \n\nTitle:\nIngredients:\n- List of ingredients\n\nSteps:\n1. Step one\n2. Step two\n\nNotes:\n- Any additional notes",
-    },
-    {
-      role: "user",
-      content: `Given the following ingredients: ${ingredients.join(', ')}, provide a recipe.`,
-    },
-  ];
-
-  try {
-    const response = await groq.chat.completions.create({
-      messages,
-      model: "llama3-8b-8192",
-      temperature: 0.5,
-      max_tokens: 1024,
-      top_p: 1,
-      stop: null,
-      stream: false,
-    });
-
-    const recipe = response.choices[0]?.message?.content.trim();
-    res.json({ recipe });
-  } catch (error) {
-    console.error('Error generating recipe:', error);
-    res.status(500).json({ error: 'Failed to generate recipe' });
+  if (!token) {
+    return res.status(401).json('No token');
   }
+
+  jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+    if (err) return res.status(403).json('Invalid token');
+
+    const messages = [
+      {
+        role: "system",
+        content: "You are a helpful assistant that provides recipes based on given ingredients. Please respond in the following format: \n\nTitle:\nIngredients:\n- List of ingredients\n\nSteps:\n1. Step one\n2. Step two\n\nNotes:\n- Any additional notes",
+      },
+      {
+        role: "user",
+        content: `Given the following ingredients: ${ingredients.join(', ')}, provide a recipe.`,
+      },
+    ];
+
+    try {
+      const response = await groq.chat.completions.create({
+        messages,
+        model: "llama3-8b-8192",
+        temperature: 0.5,
+        max_tokens: 1024,
+        top_p: 1,
+        stop: null,
+        stream: false,
+      });
+
+      const recipe = response.choices[0]?.message?.content.trim();
+
+      // Save to user's recipe history
+      const user = await User.findById(userData.userId);
+      user.recipeHistory.push({
+        input: ingredients.join(', '),
+        output: recipe,
+      });
+      await user.save();
+
+      res.json({ recipe });
+    } catch (error) {
+      console.error('Error generating recipe:', error);
+      res.status(500).json({ error: 'Failed to generate recipe' });
+    }
+  });
+});
+
+/*
+ - User sends a GET request to /recipe-history.
+ - Server verifies the JWT token from the request cookies to authenticate the user.
+ - Server retrieves the user's document from the database and sends the recipeHistory back to the client.
+*/
+app.get('/recipe-history', (req, res) => {
+  const token = req.cookies?.token;
+
+  if (!token) {
+    return res.status(401).json('No token');
+  }
+
+  jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+    if (err) return res.status(403).json('Invalid token');
+
+    const user = await User.findById(userData.userId);
+    res.json(user.recipeHistory);
+  });
 });
 
 app.listen(4000, () => {
